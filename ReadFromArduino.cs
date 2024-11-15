@@ -1,14 +1,17 @@
 using UnityEngine;
 using System.IO;
+using System.IO.Ports;
+using System;
 
 /**
  * ReadFromArduino
  * 
  * Reads data from an Arduino from the serial port,
  * then uses the data to rotate the object.
- */ 
+ */
 public class ReadFromArduino : MonoBehaviour
 {
+
     /**
      * The name of the port the Arduino is connected to
      * On Windows, this will be something like "COM3"
@@ -16,21 +19,19 @@ public class ReadFromArduino : MonoBehaviour
      * You can supply this value in the Unity Editor as well
      */
     public string portName = "/dev/cu.usbmodem101";
-   /** This is the stream that will read from the serial port
-    * We used a similar class to read from a CSV file in another assignment
-    * The StreamReader class is used to read from a stream of data,
-    * which can be a file, a network connection, or in this case, a serial port.
-    */
+    /** This is the stream that will read from the serial port
+     * We used a similar class to read from a CSV file in another assignment
+     * The StreamReader class is used to read from a stream of data,
+     * which can be a file, a network connection, or in this case, a serial port.
+     */
     private StreamReader stream;
     private string line;
-    
+
+
     // Define and flush the stream.
     void Start()
     {
-
-        stream = new(portName);
-        // Unclog any data that may be in the buffer
-        // We won't be able to read it anyway
+        stream = GetStream();
         stream.BaseStream.Flush();
     }
 
@@ -38,10 +39,10 @@ public class ReadFromArduino : MonoBehaviour
     {
 
         // Bail on this frame if the stream is null
+
+
         if (stream == null)
-        {
-            return;
-        }
+            stream = GetStream();
 
         line = stream.ReadLine();
 
@@ -77,6 +78,30 @@ public class ReadFromArduino : MonoBehaviour
 
         // Rotate the object
         transform.rotation = Quaternion.Euler(transform.rotation.x + x, 0, transform.rotation.y + y);
+
+    }
+
+    StreamReader GetStream()
+    {
+        if (SystemInfo.operatingSystemFamily == OperatingSystemFamily.Windows)
+        {
+            if (portName == "/dev/cu.usbmodem101")
+            {
+                portName = "COM3"; // Default to COM3 if no port is specified on Windows
+            }
+            SerialPort port = new SerialPort(portName, 9600);
+            port.Open();
+            stream = new StreamReader(port.BaseStream);
+        }
+        else if (SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX)
+        {
+            stream = new(portName);
+        }
+
+        // Unclog any data that may be in the buffer
+        // We won't be able to read it anyway
+        stream.BaseStream.Flush();
+        return stream;
 
     }
 
